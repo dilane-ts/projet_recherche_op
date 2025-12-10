@@ -1,12 +1,6 @@
 #include <stdio.h>
 #include "connexite.h"
 
-/* 
- * BFS sur le graphe biparti :
- *  - sommets 0..nF-1 : fournisseurs P1..PnF
- *  - sommets nF..nF+nC-1 : clients C1..CnC
- * arête entre Pi et Cj ssi base[i][j] != 0
- */
 int test_connexite(int nF, int nC,
                    int base[nF][nC],
                    int compSommet[nF + nC])
@@ -64,8 +58,6 @@ int test_connexite(int nF, int nC,
         }
     }
 
-    /* Affichage demandé dans la fiche de projet :
-       Si non connexe, afficher les sous-graphes connexes */
     if (nbComp == 1) {
         printf("La proposition est connexe.\n");
     } else {
@@ -88,16 +80,6 @@ int test_connexite(int nF, int nC,
     return nbComp;
 }
 
-/* 
- * Complète la base si le graphe n'est pas connexe :
- *  - on cherche l'arête (Pi, Cj) NON basique de coût minimal
- *    telle que compSommet(Pi) != compSommet(Cj)
- *  - on l'ajoute à la base
- *  - on recommence jusqu'à nbComp == 1
- *
- * À ce stade, si tu as déjà supprimé tous les cycles avant,
- * tu obtiens un ARBRE couvrant (non dégénéré) comme décrit dans la fiche.
- */
 void rendre_connexe(int nF, int nC,
                     int base[nF][nC],
                     int cout[nF][nC])
