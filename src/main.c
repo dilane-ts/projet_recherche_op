@@ -19,10 +19,19 @@ int main() {
     int * cycles;
     afficherGraphe(sommets, t->nbre_commandes + t->nbre_provisions, t->nbre_provisions);
     int longueur = detecter_cycles(sommets, t->nbre_commandes + t->nbre_provisions, &cycles);
-    if(longueur)
+    if(longueur) {
         afficherCycle(cycles, longueur);
-        
 
+        // Hypothèse : cycle[0]->cycle[1] est l'arête non basique candidate (signe '+')
+        int delta = maximiser_transport_sur_cycle(t, cycles, longueur, /*start_plus=*/1);
+        printf("Delta pousse sur le cycle = %d\n", delta);
+
+        printf("Proposition après maximisation sur cycle :\n");
+        afficher_proposition_transport(t);
+        free(cycles);
+    }
+
+    liberer_graphe(sommets, t->nbre_commandes + t->nbre_provisions);
     libererTransport(t);
     return 0;
 }

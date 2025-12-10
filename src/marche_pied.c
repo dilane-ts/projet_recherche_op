@@ -70,7 +70,7 @@ void liberer_graphe(Sommet * sommets, int nbre_sommets) {
     free(sommets);
 }
 
-void ajouter_aret(Sommet * sommets, int depart, int arrive) {
+void ajouter_arete(Sommet * sommets, int depart, int arrive) {
     sommets[depart].degre++;
     sommets[arrive].degre++;
 
@@ -192,4 +192,104 @@ void afficherCycle(int *cycle, int n) {
 
     printf(" -> %d", cycle[0]); 
     printf("\n");
+}
+
+// -----------------------------------------------------------------------------
+// Maximisation du transport sur un cycle détecté (méthode du marche-pied)
+// -----------------------------------------------------------------------------
+
+/* Convertit une arête entre deux sommets du graphe biparti en coordonnée (i,j)
+ * Retourne 0 si OK et remplit (i,j), ou -1 si l'arête n'est pas une F<->C valide.
+ */
+static int edge_to_ij(const Transport *t, int u, int v, int *i, int *j) {
+    int nF = t->nbre_provisions;
+    int nC = t->nbre_commandes;
+
+    // u est fournisseur ?
+    if (u >= 0 && u < nF) {
+        // v doit être une commande
+        if (v >= nF && v < nF + nC) {
+            *i = u;
+            *j = v - nF;
+            return 0;
+        }
+        return -1;
+    }
+    // u est commande ?
+    if (u >= nF && u < nF + nC) {
+        // v doit être un fournisseur
+        if (v >= 0 && v < nF) {
+            *i = v;
+            *j = u - nF;
+            return 0;
+        }
+        return -1;
+    }
+    return -1;
+}
+
+/* Renvoie la quantité x[i][j] associée à l'arête (u,v) si c'est une arête F<->C,
+ * sinon -1 en cas d'arête invalide.
+ */
+static int get_qty_on_edge(const Transport *t, int u, int v) {
+    int i, j;
+    if (edge_to_ij(t, u, v, &i, &j) != 0) return -1;
+    return t->tab[i][j];
+}
+
+/* Ajoute (peut être négatif) delta à l'arête (u,v) si F<->C valide. */
+static void add_qty_on_edge(Transport *t, int u, int v, int delta) {
+    int i, j;
+    if (edge_to_ij(t, u, v, &i, &j) != 0) return;
+    t->tab[i][j] += delta;
+    if (t->tab[i][j] < 0) t->tab[i][j] = 0; // sécurité
+}
+
+/* Applique la maximisation sur un cycle.
+ * cycle : séquence de sommets (F,C,F,C,...) de longueur len ; on suppose cycle fermé :
+ * les arêtes du cycle sont (cycle[k], cycle[(k+1)%len]) pour k=0..len-1
+ * start_plus : 1 si l'arête k=0 est marquée '+', sinon 0 (elle serait '-').
+ * Retourne Δ (valeur poussée).
+ */
+int maximiser_transport_sur_cycle(Transport *t, const int *cycle, int len, int start_plus) {
+    if (!t || !cycle || len < 4 || (len % 2) != 0) {
+        // Un cycle valide a au moins 4 sommets et longueur paire
+        return 0;
+    }
+
+    // 1) Déterminer Δ = min des quantités sur les arêtes "−" du cycle
+    int delta = -1;
+    for (int k = 0; k < len; ++k) {
+        int u = cycle[k];
+        int v = cycle[(k + 1) % len];
+
+        int is_plus = ((k % 2) == 0) ? start_plus : !start_plus;
+        if (!is_plus) { // arête "−"
+            int q = get_qty_on_edge(t, u, v);
+            if (q < 0) {
+                fprintf(stderr, "Cycle invalide: arête non basique F<->C introuvable pour k=%d\n", k);
+                return 0;
+            }
+            if (delta == -1 || q < delta) delta = q;
+        }
+    }
+    if (delta < 0) delta = 0; // si aucune arête "−" trouvée (ne devrait pas arriver si le cycle est correct)
+    if (delta == 0) {
+        // Cas dégénéré : on pousse 0 → rien ne change ; le pilote de marche-pied
+        // décidera quelle arête 0 retirer si besoin.
+        return 0;
+    }
+
+    // 2) Appliquer les +Δ / −Δ le long du cycle
+    for (int k = 0; k < len; ++k) {
+        int u = cycle[k];
+        int v = cycle[(k + 1) % len];
+        int is_plus = ((k % 2) == 0) ? start_plus : !start_plus;
+        add_qty_on_edge(t, u, v, is_plus ? +delta : -delta);
+    }
+
+    // 3) Optionnel : retirer proprement de la base une des arêtes "−" devenues 0
+    // (Ici on laisse à 0 ; si tu tiens une structure "base" booléenne, pense à la MAJ.)
+
+    return delta;
 }
