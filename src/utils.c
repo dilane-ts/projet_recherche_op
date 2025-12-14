@@ -48,44 +48,60 @@ int somme_colonne(int ** M, int j, int start, int end) {
 }
 
 
-int     penalite_ligne(int **M, int m, int i, ListeExclusion liste, int *min_pos) {
-    int min1 = 0;
-    for(int j = 1; j < m; j++) {
-        if( est_exclu(j, COLONNE, liste) == 0 && M[i][j] < M[i][min1]) {
-            min1 = j;
-        }
-    }
+int  penalite_ligne(int **M, int m, int i, ListeExclusion liste, int *min_pos) {
+    int C_min1 = -1;
+    int C_min2 = -1;
+    int j_min1 = -1;
 
-    int min2 = (min1 + 1) % m;
     for(int j = 0; j < m; j++) {
-        if(est_exclu(j, COLONNE, liste) == 0 && min1 != j && M[i][min2] > M[i][j]) {
-            min2 = j;
+        if( est_exclu(j, COLONNE, liste) == 0) {
+            int current_cost = M[i][j];
+
+            if(C_min1 == -1 || current_cost < C_min1) {
+                C_min2 = C_min1;
+                C_min1 = current_cost;
+                j_min1 = j;
+            } else if (C_min2 == -1 || current_cost < C_min2) {
+                C_min2 = current_cost;
+            }
         }
     }
 
-    *min_pos = min1;
+    *min_pos = j_min1;
 
-    return abs(M[i][min2] - M[i][min1]);
+    if(C_min1 == -1 || C_min1 == -1) {
+        return 0;
+    }
+
+    return abs(C_min2 - C_min1);
 }
 
 int penalite_colone(int **M, int n, int j, ListeExclusion liste, int *min_pos) {
-   int min1 = 0;
-    for(int i = 1; i < n; i++) {
-        if( est_exclu(i, LIGNE, liste) == 0 && M[i][j] < M[min1][j]) {
-            min1 = i;
-        }
-    }
+    int C_min1 = -1;
+    int C_min2 = -1;
+    int i_min1 = -1;
 
-    int min2 = (min1 + 1) % n;
     for(int i = 0; i < n; i++) {
-        if( est_exclu(i, LIGNE, liste) == 0 && min1 != i && M[min2][j] > M[i][j]) {
-            min2 = i;
+        if( est_exclu(i, LIGNE, liste) == 0) {
+            int current_cost = M[i][j];
+
+            if(C_min1 == -1 || current_cost < C_min1) {
+                C_min2 = C_min1;
+                C_min1 = current_cost;
+                i_min1 = i;
+            } else if (C_min2 == -1 || current_cost < C_min2) {
+                C_min2 = current_cost;
+            }
         }
     }
 
-    *min_pos = min1;
+    *min_pos = i_min1;
 
-    return abs(M[min2][j] - M[min1][j]);
+    if(C_min1 == -1 || C_min2 == -1) {
+        return 0;
+    }
+
+    return abs(C_min2 - C_min1);
 }
 
 int somme_matrice(int **M, int n, int m) {
